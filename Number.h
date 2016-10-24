@@ -1,5 +1,8 @@
-#ifndef __NUMBER__
-#define __NUMBER__
+/**
+ * Created by Yaroslav Bondarenko
+ */
+
+#pragma once
 
 #include <cstddef>
 #include <cstring>
@@ -29,7 +32,7 @@ namespace LongNumber
                                     ///< Used explicitly in operators for performance optimizing.
                                     ///< Do not move to public fields.
                                     ///<
-                                    ///<  true - contents should be retrieved instead of copying;
+                                    ///< true - contents should be retrieved instead of copying;
                                     ///< false - explicit copy is required
 
         bool _sign;                 ///< true  - positive, false - negative
@@ -61,28 +64,32 @@ namespace LongNumber
         /**
          * @return          temporary Number object (contents to be retrieved)
          */
-        Number operator+ (Number &add);
+        Number operator+ (const Number &add) const ;
 
         /**
          * @return          temporary Number object (contents to be retrieved)
         */
-        Number operator- (Number &sub);
+        Number operator- (const Number &sub) const ;
         /** Retrieves contents from temporary objects; otherwise copies them
          *
          * @return          -   reference to itself for chain assignments
          */
         Number& operator= (const Number &assign);
 
-        bool operator == (Number &arg);
-        bool operator > (Number &arg);
-        bool operator < (Number &arg);
-        bool operator >= (Number &arg);
-        bool operator <= (Number &arg);
+        Number& operator+= (const Number &add);
+        Number& operator-= (const Number &sub);
+
+        bool operator == (const Number &arg) const;
+        bool operator != (const Number &arg) const;
+        bool operator > (const Number &arg) const;
+        bool operator < (const Number &arg) const;
+        bool operator >= (const Number &arg) const;
+        bool operator <= (const Number &arg) const;
 
         /// Reverses the sign
         void negate(void);
-        unsigned long getSize(void);
-        bool getSign(void);
+        unsigned long getSize(void) const;
+        bool getSign(void) const;
 
         /** Compares absolute values
          *
@@ -90,9 +97,9 @@ namespace LongNumber
          *              a > b   -   1
          *              a < b   -   -1
          */
-        static int modcmp(Number &a, Number &b);
+        static int modcmp(const Number &a, const Number &b);
 
-        friend std::ostream& operator<< (std::ostream& out, Number& src);
+        friend std::ostream& operator<< (std::ostream& out, const Number& src);
         ~Number();
 
     protected:
@@ -100,20 +107,18 @@ namespace LongNumber
          *
          * @return  result vector of TWORD without leading zeros
          */
-        static std::vector<TWORD>* __add(std::vector<TWORD> &a, std::vector<TWORD> &b);
+        static std::vector<TWORD>* __add(std::vector<TWORD> *ret, const std::vector<TWORD> &a, const std::vector<TWORD> &b);
 
         /** Subtraction of absolute values
          *
          * @return  result vector of TWORD without leading zeros
          */
-        static std::vector<TWORD>* __sub(std::vector<TWORD> &a, std::vector<TWORD> &b);
+        static std::vector<TWORD>* __sub(std::vector<TWORD> *ret, const std::vector<TWORD> &a, const std::vector<TWORD> &b);
     };
 
     /** Hexadecimal output to standard streams (cout, string)
      *
      * @return  reference to itself for chain assignments
      */
-    std::ostream& operator<< (std::ostream& out, Number& src);
+    std::ostream& operator<< (std::ostream& out, const Number& src);
 }
-
-#endif
