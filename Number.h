@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <cstring>
+#include <cstdlib>
 #include <malloc.h>
 #include <iostream>
 #include <iomanip>
@@ -23,6 +24,8 @@ namespace LongNumber
     /// Twice as large as TWORD
     typedef unsigned long TDWORD;
 
+    typedef long TSDWORD;
+
     ///Basic class for long calculation
     class Number
     {
@@ -36,7 +39,6 @@ namespace LongNumber
                                     ///< false - explicit copy is required
 
         bool _sign;                 ///< true  - positive, false - negative
-
         /** Operator-specific
          *  Used in operators to make use of _tmp flag
          *
@@ -44,7 +46,7 @@ namespace LongNumber
          * @param sign   - sets the _sign
          * @param tmp    - could the contents be retrieved or should be copied
          */
-        Number(std::vector<TWORD> *number, bool sign, bool tmp):
+        Number(std::vector<TWORD> *number, bool sign, bool tmp, bool opflag):
                 _num(number), _tmp(tmp), _sign(sign){};
 
     public:
@@ -53,23 +55,17 @@ namespace LongNumber
          * @param number - vector of basic units
          * @param sign   - true = positive, false = negative (0 is positive)
          */
-        Number(std::vector<TWORD> *number, bool sign): _num(number), _sign(sign){};
-
-        /** Copy constructor, mainly used for assignment (=)
-         *
-         * @param cp - target Number to copy (temporary ones are emptied)
-         */
-        Number(const Number& cp);
+        Number(std::vector<TWORD> *number = NULL, bool sign = true): _num(number), _sign(sign){};
 
         /**
          * @return          temporary Number object (contents to be retrieved)
          */
-        Number operator+ (const Number &add) const ;
+        Number operator+ (Number &add);
 
         /**
          * @return          temporary Number object (contents to be retrieved)
         */
-        Number operator- (const Number &sub) const ;
+        Number operator- (Number &sub);
         /** Retrieves contents from temporary objects; otherwise copies them
          *
          * @return          -   reference to itself for chain assignments
@@ -90,13 +86,6 @@ namespace LongNumber
         void negate(void);
         unsigned long getSize(void) const;
         bool getSign(void) const;
-
-        /** Compares absolute values
-         *
-         * @return      a = b   -   0
-         *              a > b   -   1
-         *              a < b   -   -1
-         */
         static int modcmp(const Number &a, const Number &b);
 
         friend std::ostream& operator<< (std::ostream& out, const Number& src);
@@ -114,6 +103,10 @@ namespace LongNumber
          * @return  result vector of TWORD without leading zeros
          */
         static std::vector<TWORD>* __sub(std::vector<TWORD> *ret, const std::vector<TWORD> &a, const std::vector<TWORD> &b);
+
+        inline std::vector<TWORD>* __add_sign_op(std::vector<TWORD> *ret, const Number &add, bool &sign);
+
+        inline std::vector<TWORD>* __sub_sign_op(std::vector<TWORD> *ret, const Number &sub, bool &sign);
     };
 
     /** Hexadecimal output to standard streams (cout, string)
