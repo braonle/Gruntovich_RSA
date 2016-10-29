@@ -162,11 +162,10 @@ inline std::vector<TWORD>* Number::__add_sign_op(std::vector<TWORD> *ptr, const 
         ptr = __add(ptr, *_num, *add._num);
         sign = _sign;
     }
-    // Trivial result
     else
     {
         int res = modcmp(*this, add);
-
+        // Trivial result
         if (res == 0)
         {
             ptr = new std::vector<TWORD>;
@@ -193,11 +192,10 @@ inline std::vector<TWORD>* Number::__sub_sign_op(std::vector<TWORD> *ptr, const 
         ptr = __add(ptr, *_num, *sub._num);
         sign = _sign;
     }
-    // Trivial result
     else
     {
         int res = modcmp(*this, sub);
-
+        // Trivial result
         if (res == 0)
         {
             ptr = new std::vector<TWORD>;
@@ -224,22 +222,29 @@ std::vector<TWORD>* Number::__add(std::vector<TWORD> *res,
     unsigned long min = MIN(a.size(), b.size());
     unsigned long max = MAX(a.size(), b.size());
     unsigned long size = ret->size();
+    unsigned long i = 0;
 
-    for (unsigned long i = 0; i < min; ++i)
+    for (; i < min && i < size; ++i)
     {
         tmp = (TDWORD) a[i] + b[i] + HIWORD(tmp);
-        if (i < size)
-            (*ret)[i] = LOWORD(tmp);
-        else
-            ret->push_back(LOWORD(tmp));
+        (*ret)[i] = LOWORD(tmp);
     }
-    for (unsigned long i = min; i < max; ++i)
+    for (; i < min && i >= size; ++i)
+    {
+        tmp = (TDWORD) a[i] + b[i] + HIWORD(tmp);
+        ret->push_back(LOWORD(tmp));
+    }
+
+    i = min;
+    for (; i < max && i < size; ++i)
     {
         tmp = (TDWORD) extra[i] + HIWORD(tmp);
-        if (i < size)
-            (*ret)[i] = LOWORD(tmp);
-        else
-            ret->push_back(LOWORD(tmp));
+        (*ret)[i] = LOWORD(tmp);
+    }
+    for (; i < max && i >= size; ++i)
+    {
+        tmp = (TDWORD) extra[i] + HIWORD(tmp);
+        ret->push_back(LOWORD(tmp));
     }
 
     if (HIWORD(tmp))
@@ -252,50 +257,60 @@ std::vector<TWORD>* Number::__sub(std::vector<TWORD> *res,
                                   const std::vector<TWORD> &a, const std::vector<TWORD> &b)
 {
     std::vector<TWORD> *ret = (res == NULL) ? (new std::vector<TWORD>) : res;
-    const std::vector<TWORD> &extra = (a.size() > b.size()) ? a : b;
     unsigned short cf = 0;
     unsigned long count = 0;
     unsigned long min = MIN(a.size(), b.size());
     unsigned long max = MAX(a.size(), b.size());
     unsigned long size = ret->size();
-    TSDWORD tmp;
-    unsigned long i;
+    TWORD tmp;
+    unsigned long i = 0;
 
-    for (i = 0; i < min; ++i)
-    {
-        if (a[i] <= (tmp = b[i] + (TDWORD) cf))
+    //a and b intercept eah other
+    for (; i < min && i < size; ++i)
+        if (a[i] < (tmp = b[i] + (TDWORD) cf))
         {
-            tmp -= (TDWORD) (1 << (sizeof(TWORD) * 8));
+            (*ret)[i] = (TDWORD) (1 << (sizeof(TWORD) * 8)) + a[i] - tmp;
             cf = 1;
         } else
-            cf = 0;
-
-        if (i < size)
-            (*ret)[i] = a[i] - tmp;
-        else
-            ret->push_back(a[i] - tmp);
-    }
-    for (i = min; i < max && cf; ++i)
-    {
-        if (extra[i] >= cf)
         {
-            tmp = extra[i] - cf;
+            cf = 0;
+            (*ret)[i] = a[i] - tmp;
+        }
+    for (; i < min && i >= size; ++i)
+        if (a[i] < (tmp = b[i] + (TDWORD) cf))
+        {
+            ret->push_back((TDWORD) (1 << (sizeof(TWORD) * 8)) + a[i] - tmp);
+            cf = 1;
+        } else
+        {
+            cf = 0;
+            ret->push_back(a[i] - tmp);
+        }
+
+    //Dealing with carry until disappears
+    i = min;
+    for (; i < max && cf && i < size; ++i)
+        if (a[i] >= cf)
+        {
+            (*ret)[i] = a[i] - cf;
             cf = 0;
         }
         else
-            tmp = extra[i] + (TDWORD)(1 << (sizeof(TWORD) * 8)) - cf;
-
-        if (i < size)
-            (*ret)[i] = tmp;
+            (*ret)[i] = a[i] + (TDWORD)(1 << (sizeof(TWORD) * 8)) - cf;
+    for (; i < max && cf && i >= size; ++i)
+        if (a[i] >= cf)
+        {
+            ret->push_back(a[i] - cf);
+            cf = 0;
+        }
         else
-            ret->push_back(tmp);
-    }
+            ret->push_back(a[i] + (TDWORD)(1 << (sizeof(TWORD) * 8)) - cf);
 
-    for (i = min; i < max; ++i)
-        if (i < size)
-            (*ret)[i] = extra[i];
-        else
-            ret->push_back(extra[i]);
+    //Copy the remaining contents
+    for (; i < max && i < size; ++i)
+            (*ret)[i] = a[i];
+    for (; i < max && i >= size; ++i)
+            ret->push_back(a[i]);
 
     // Removal of leading zeros
     for (i = ret->size(); i > 0; --i)

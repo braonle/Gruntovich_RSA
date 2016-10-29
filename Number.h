@@ -24,8 +24,6 @@ namespace LongNumber
     /// Twice as large as TWORD
     typedef unsigned long TDWORD;
 
-    typedef long TSDWORD;
-
     ///Basic class for long calculation
     class Number
     {
