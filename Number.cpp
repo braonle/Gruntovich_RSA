@@ -12,7 +12,7 @@ Number::~Number()
         delete _num;
 }
 
-Number Number::operator+(Number &add)
+Number Number::operator+(const Number &add)
 {
     std::vector<TWORD> *ptr;
     bool sign = _sign;
@@ -24,12 +24,12 @@ Number Number::operator+(Number &add)
     if (_tmp)
         _num = NULL;
     else if (add._tmp)
-        add._num = NULL;
+        const_cast<Number&>(add)._num = NULL;
 
-    return Number (ptr, sign, true, true);
+    return Number (ptr, sign, true);
 }
 
-Number Number::operator-(Number &sub)
+Number Number::operator-(const Number &sub)
 {
     std::vector<TWORD> *ptr;
     bool sign = _sign;
@@ -41,10 +41,22 @@ Number Number::operator-(Number &sub)
     if (_tmp)
         _num = NULL;
     else if (sub._tmp)
-        sub._num = NULL;
+        const_cast<Number&>(sub)._num = NULL;
 
 
-    return Number(ptr, sign, true, true);
+    return Number(ptr, sign, true);
+}
+
+Number Number::operator*(const Number &mul)
+{
+    return Number(__mul(*_num, *mul._num),
+                  !(_sign ^ mul._sign), true);
+}
+
+Number Number::operator* (TWORD mul)
+{
+    return Number(__mul(*_num, mul, NULL),
+                  !(_sign ^ (mul >= 0)), true);
 }
 
 Number& Number::operator-=(const Number &sub)
@@ -53,9 +65,158 @@ Number& Number::operator-=(const Number &sub)
     return *this;
 }
 
+Number Number::operator/ (const Number &div)
+{
+    std::vector<TWORD> *ptr, *rm;
+    bool sign = !(_sign ^ div._sign);
+
+    switch(modcmp(*this, div))
+    {
+        case 0:
+            if (_tmp)
+            {
+                ptr = _num;
+                _num = NULL;
+                ptr->clear();
+            }
+            else if (div._tmp)
+            {
+                ptr = div._num;
+                const_cast<Number&>(div)._num = NULL;
+                ptr->clear();
+            }
+            else
+                ptr = new std::vector<TWORD>;
+
+            ptr->push_back(1);
+            break;
+        case -1:
+            if (_tmp)
+            {
+                ptr = _num;
+                _num = NULL;
+                ptr->clear();
+            }
+            else if (div._tmp)
+            {
+                ptr = div._num;
+                const_cast<Number&>(div)._num = NULL;
+                ptr->clear();
+            }
+            else
+                ptr = new std::vector<TWORD>;
+
+            ptr->push_back(0);
+            break;
+        default:
+            ptr = __div(*_num, *div._num, &rm);
+            if (!sign && (rm->size() > 1 || (*rm)[0] != 0))
+            {
+                std::vector<TWORD> a;
+                a.push_back(1);
+                __add(ptr, *ptr, a);
+            }
+    }
+    return Number(ptr, sign, true);
+}
+
+Number Number::operator% (const Number &div)
+{
+    std::vector<TWORD> *ptr;
+    switch(modcmp(*this, div))
+    {
+        case 0:
+            ptr = new std::vector<TWORD>;
+            ptr->push_back(0);
+            break;
+        case -1:
+            if (_tmp)
+            {
+                ptr = _num;
+                _num = NULL;
+            }
+            else
+            {
+                ptr = new std::vector<TWORD>;
+                std::copy(_num->begin(), _num->end(), ptr->begin());
+            }
+            break;
+        default:
+            __div(*_num, *div._num, &ptr);
+            if (_sign ^ div._sign && (ptr->size() > 1 || (*ptr)[0] != 0))
+                __sub(ptr, *div._num, *ptr);
+    }
+    return Number(ptr, true, true);
+}
+
 Number& Number::operator+= (const Number &add)
 {
     __add_sign_op(_num, add, _sign);
+    return *this;
+}
+
+Number& Number::operator*=(const Number &mul)
+{
+    std::vector<TWORD> *ptr = __mul(*_num, *mul._num);
+    _sign = !(_sign ^ mul._sign);
+    delete _num;
+    _num = ptr;
+    return *this;
+}
+
+Number& Number::operator*= (TWORD mul)
+{
+    __mul(*_num, mul, _num);
+    _sign = !(_sign ^ (mul >= 0));
+    return *this;
+}
+
+Number& Number::operator/= (const Number &div)
+{
+    std::vector<TWORD> *ptr, *rm;
+    _sign = !(_sign ^ div._sign);
+    switch(modcmp(*this, div))
+    {
+        case 0:
+            _num->clear();
+            _num->push_back(1);
+            break;
+        case -1:
+            _num->clear();
+            _num->push_back(0);
+            break;
+        default:
+            ptr = __div(*_num, *div._num, &rm);
+            if (!_sign && (rm->size() > 1 || (*rm)[0] != 0))
+            {
+                std::vector<TWORD> a;
+                a.push_back(1);
+                __add(ptr, *ptr, a);
+            }
+            delete _num;
+            _num = ptr;
+    }
+
+    return *this;
+}
+
+Number& Number::operator%= (const Number &div)
+{
+    std::vector<TWORD> *ptr;
+    _sign = true;
+    switch(modcmp(*this, div))
+    {
+        case 0:
+            _num->clear();
+            _num->push_back(0);
+            break;
+        case 1:
+            __div(*_num, *div._num, &ptr);
+            if (_sign ^ div._sign && (ptr->size() > 1 || (*ptr)[0] != 0))
+                __sub(ptr, *div._num, *ptr);
+            delete _num;
+            _num = ptr;
+    }
     return *this;
 }
 
@@ -334,4 +495,203 @@ int Number::modcmp(const Number &a, const Number &b)
         else if (a._num->at(i - 1) < b._num->at(i - 1))
             return -1;
     return 0;
+}
+
+std::vector<TWORD>* Number::__mul(const std::vector<TWORD> &a, const std::vector<TWORD> &b)
+{
+    std::vector<TWORD> *ret = new std::vector<TWORD>;
+    TDWORD tmp;
+
+    for (int i = 0; i < a.size(); ++i)
+    {
+        tmp = 0;
+        for (int j = 0; j < b.size(); ++j)
+        {
+            tmp = (TDWORD) a[i] * b[j] + HIWORD(tmp);
+            if (i + j < ret->size())
+            {
+                tmp += (*ret)[i+j];
+                (*ret)[i + j] = LOWORD(tmp);
+
+            }
+            else
+                ret->push_back(LOWORD(tmp));
+        }
+
+        if (HIWORD(tmp))
+            if (i + b.size() < ret->size())
+            {
+                tmp += (*ret)[i + b.size()];
+                (*ret)[i + b.size()] = LOWORD(tmp);
+                if (HIWORD(tmp))
+                    ret->push_back(1);
+            }
+            else
+                ret->push_back(HIWORD(tmp));
+    }
+
+    return ret;
+}
+
+std::vector<TWORD>* Number::__mul(const std::vector<TWORD> &a, const TWORD b, std::vector<TWORD> *res)
+{
+    std::vector<TWORD> *ret = (!res) ? (new std::vector<TWORD>) : res;
+    TDWORD tmp = 0;
+    int i = 0;
+    unsigned long edge = ret->size();
+    unsigned long size = a.size();
+
+    for (i = 0; i < size && i < edge; ++i)
+    {
+        tmp = (TDWORD) a[i] * b + HIWORD(tmp);
+        (*ret)[i] = LOWORD(tmp);
+    }
+
+    for (; i < size; ++i)
+    {
+        tmp = (TDWORD) a[i] * b + HIWORD(tmp);
+        ret->push_back(LOWORD(tmp));
+    }
+
+    if (HIWORD(tmp))
+        if (i < edge)
+            (*ret)[i] = HIWORD(tmp);
+        else
+            ret->push_back(HIWORD(tmp));
+
+    return ret;
+}
+
+std::vector<TWORD>* Number::__div(std::vector<TWORD> &A, std::vector<TWORD> &B,
+                                            std::vector<TWORD> **rem)
+{
+    std::vector<TWORD> *ret = new std::vector<TWORD>;
+    long ptr = A.size() - 1;
+    Number a(new std::vector<TWORD>, true, false), b(&B,true, false), rm (NULL, true, false);
+    TWORD cmpvar = A[A.size() - 1];
+    TWORD cmp = B[B.size() - 1];
+
+    auto construct = [&] (int s) -> void
+    {
+        long sz2 = (rm._num) ? rm._num->size() : 0;
+        long sz1 = B.size() + s - 1 - sz2;
+
+        a._num->clear();
+        for (long i = sz1; i >= 0 ; --i)
+            a._num->push_back(A[ptr - i]);
+        for (long i = 0; i < sz2; ++i)
+            a._num->push_back((*rm._num)[i]);
+        ptr -= sz1 + 1;
+    };
+
+    while (ptr >= 0)
+    {
+        construct(cmpvar < cmp ? 1 : 0);
+
+        TDWORD lo = 0, hi = ((TDWORD)1 << (sizeof(TWORD) * 8)) - 1;
+        TWORD x = 0;
+
+        while (lo <= hi)
+        {
+            TWORD tmp = (lo + hi) >> 1;
+            if (a >= b * tmp)
+            {
+                x = tmp;
+                lo = tmp + 1;
+            }
+            else
+                hi = tmp - 1;
+        }
+
+        rm = a - b * x;
+        ret->push_back(x);
+        cmpvar = (*rm._num)[rm._num->size() - 1];
+    }
+
+    if (rem)
+    {
+        *rem = rm._num;
+        rm._num = NULL;
+    }
+    b._num = NULL;
+
+    ptr = ret->size() - 1;
+    long size = ret->size() / 2 - 1;
+    for (unsigned long i = 0; i <= size; ++i)
+    {
+        cmp = (*ret)[i];
+        (*ret)[i] = (*ret)[ptr - i];
+        (*ret)[ptr - i] = cmp;
+    }
+
+    return ret;
+}
+
+Number** Number::divide(Number &div)
+{
+    std::vector<TWORD> *ptr, *rm;
+    bool sign = !(_sign ^ div._sign);
+    switch(modcmp(*this, div))
+    {
+        case 0:
+            if (_tmp)
+            {
+                ptr = _num;
+                _num = NULL;
+            }
+            else
+                ptr = new std::vector<TWORD>;
+            ptr->push_back(1);
+
+            if (div._tmp)
+            {
+                rm = div._num;
+                div._num = NULL;
+            }
+            else
+                rm = new std::vector<TWORD>;
+            rm->push_back(0);
+
+            break;
+        case -1:
+
+            if (_tmp)
+            {
+                rm = _num;
+                _num = NULL;
+            }
+            else
+            {
+                rm = new std::vector<TWORD>;
+                std::copy(_num->begin(), _num->end(), rm->begin());
+            }
+
+            if (div._tmp)
+            {
+                ptr = div._num;
+                div._num = NULL;
+                ptr->clear();
+            }
+            else
+                ptr = new std::vector<TWORD>;
+
+            ptr->push_back(0);
+
+            break;
+        default:
+            ptr = __div(*_num, *div._num, &rm);
+            if (!sign && (rm->size() > 1 || (*rm)[0] != 0))
+            {
+                std::vector<TWORD> a;
+                a.push_back(1);
+                __add(ptr, *ptr, a);
+                __sub(ptr, *div._num, *ptr);
+            }
+    }
+
+    Number **ret = new Number*[2];
+    ret[0] = new Number(ptr, sign, false);
+    ret[1] = new Number(rm, true, false);
+
+    return ret;
 }

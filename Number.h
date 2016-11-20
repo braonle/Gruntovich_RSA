@@ -44,7 +44,7 @@ namespace LongNumber
          * @param sign   - sets the _sign
          * @param tmp    - could the contents be retrieved or should be copied
          */
-        Number(std::vector<TWORD> *number, bool sign, bool tmp, bool opflag):
+        Number(std::vector<TWORD> *number, bool sign, bool tmp):
                 _num(number), _tmp(tmp), _sign(sign){};
 
     public:
@@ -58,12 +58,20 @@ namespace LongNumber
         /**
          * @return          temporary Number object (contents to be retrieved)
          */
-        Number operator+ (Number &add);
-
+        Number operator+ (const Number &add);
         /**
          * @return          temporary Number object (contents to be retrieved)
         */
-        Number operator- (Number &sub);
+        Number operator- (const Number &sub);
+
+        Number operator* (const Number &mul);
+
+        Number operator* (const TWORD mul);
+
+        Number operator/ (const Number &div);
+
+        Number operator% (const Number &div);
+
         /** Retrieves contents from temporary objects; otherwise copies them
          *
          * @return          -   reference to itself for chain assignments
@@ -72,6 +80,12 @@ namespace LongNumber
 
         Number& operator+= (const Number &add);
         Number& operator-= (const Number &sub);
+        Number& operator*= (const Number &mul);
+        Number& operator*= (TWORD mul);
+        Number& operator/= (const Number &div);
+        Number& operator%= (const Number &div);
+
+        Number** divide(Number &div);
 
         bool operator == (const Number &arg) const;
         bool operator != (const Number &arg) const;
@@ -94,17 +108,28 @@ namespace LongNumber
          *
          * @return  result vector of TWORD without leading zeros
          */
-        static std::vector<TWORD>* __add(std::vector<TWORD> *ret, const std::vector<TWORD> &a, const std::vector<TWORD> &b);
+        static std::vector<TWORD>* __add(std::vector<TWORD> *ret,
+                                         const std::vector<TWORD> &a, const std::vector<TWORD> &b);
 
         /** Subtraction of absolute values
          *
          * @return  result vector of TWORD without leading zeros
          */
-        static std::vector<TWORD>* __sub(std::vector<TWORD> *ret, const std::vector<TWORD> &a, const std::vector<TWORD> &b);
+        static std::vector<TWORD>* __sub(std::vector<TWORD> *ret,
+                                         const std::vector<TWORD> &a, const std::vector<TWORD> &b);
 
-        inline std::vector<TWORD>* __add_sign_op(std::vector<TWORD> *ret, const Number &add, bool &sign);
+        inline std::vector<TWORD>* __add_sign_op(std::vector<TWORD> *ret,
+                                                 const Number &add, bool &sign);
 
-        inline std::vector<TWORD>* __sub_sign_op(std::vector<TWORD> *ret, const Number &sub, bool &sign);
+        inline std::vector<TWORD>* __sub_sign_op(std::vector<TWORD> *ret,
+                                                 const Number &sub, bool &sign);
+
+        static std::vector<TWORD>* __mul(const std::vector<TWORD> &a, const std::vector<TWORD> &b);
+
+        static std::vector<TWORD>* __mul(const std::vector<TWORD> &a, const TWORD b, std::vector<TWORD> *res);
+
+        static std::vector<TWORD>* __div(std::vector<TWORD> &a, std::vector<TWORD> &b,
+                                            std::vector<TWORD> **rem);
     };
 
     /** Hexadecimal output to standard streams (cout, string)
