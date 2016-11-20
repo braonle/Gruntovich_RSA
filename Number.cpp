@@ -510,6 +510,7 @@ std::vector<TWORD>* Number::__mul(const std::vector<TWORD> &a, const std::vector
             tmp = (TDWORD) a[i] * b[j] + HIWORD(tmp);
             if (i + j < ret->size())
             {
+                // ret += not allowed <- TWORD overflow
                 tmp += (*ret)[i+j];
                 (*ret)[i + j] = LOWORD(tmp);
 

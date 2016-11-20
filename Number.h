@@ -63,13 +63,21 @@ namespace LongNumber
          * @return          temporary Number object (contents to be retrieved)
         */
         Number operator- (const Number &sub);
-
+        /**
+        * @return          temporary Number object (contents to be retrieved)
+        */
         Number operator* (const Number &mul);
-
+        /**
+         * @return          temporary Number object (contents to be retrieved)
+        */
         Number operator* (const TWORD mul);
-
+        /**
+         * @return          temporary Number object (contents to be retrieved)
+        */
         Number operator/ (const Number &div);
-
+        /**
+         * @return          temporary Number object (contents to be retrieved)
+        */
         Number operator% (const Number &div);
 
         /** Retrieves contents from temporary objects; otherwise copies them
@@ -85,6 +93,15 @@ namespace LongNumber
         Number& operator/= (const Number &div);
         Number& operator%= (const Number &div);
 
+        /** Integer division
+         *
+         * @param div   -   long number divider
+         * @return ret      pointer to 2 long numbers:
+         *                  ret[0] - entier
+         *                  ret[1] - excess
+         *
+         *  ret, ret[0], ret[1] are to be manually deleted
+         */
         Number** divide(Number &div);
 
         bool operator == (const Number &arg) const;
@@ -98,6 +115,7 @@ namespace LongNumber
         void negate(void);
         unsigned long getSize(void) const;
         bool getSign(void) const;
+
         static int modcmp(const Number &a, const Number &b);
 
         friend std::ostream& operator<< (std::ostream& out, const Number& src);
@@ -118,16 +136,43 @@ namespace LongNumber
         static std::vector<TWORD>* __sub(std::vector<TWORD> *ret,
                                          const std::vector<TWORD> &a, const std::vector<TWORD> &b);
 
+        /** Sign setting of the addition result
+         *
+         * @param ret   -   pointer for total storage (NULL, if not needed)
+         * @param add   -   summand
+         * @param sign  -   reference for total sign
+         * @return          total vector (the same as ret)
+         */
         inline std::vector<TWORD>* __add_sign_op(std::vector<TWORD> *ret,
                                                  const Number &add, bool &sign);
-
+        /** Sign setting of the subtraction result
+         *
+         * @param ret   -   pointer for remainder storage (NULL, if not needed)
+         * @param sub   -   subtrahend
+         * @param sign  -   reference for remainder sign
+         * @return          remainder vector (the same as ret)
+         */
         inline std::vector<TWORD>* __sub_sign_op(std::vector<TWORD> *ret,
                                                  const Number &sub, bool &sign);
-
+        /** Multiplication of absolute values
+         *
+         * @return  result vector of TWORD without leading zeros
+         */
         static std::vector<TWORD>* __mul(const std::vector<TWORD> &a, const std::vector<TWORD> &b);
 
+        /** Multiplying absolute long number by absolute short one
+        *
+        * @return  result vector of TWORD without leading zeros
+        */
         static std::vector<TWORD>* __mul(const std::vector<TWORD> &a, const TWORD b, std::vector<TWORD> *res);
 
+        /** Integer division of absolute values
+         *
+         * @param a     -   divident
+         * @param b     -   divider
+         * @param rem   -   pointer to the storage for excess
+         * @return result vector of TWORD without leading zeros
+         */
         static std::vector<TWORD>* __div(std::vector<TWORD> &a, std::vector<TWORD> &b,
                                             std::vector<TWORD> **rem);
     };
