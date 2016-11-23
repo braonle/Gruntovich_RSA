@@ -116,13 +116,14 @@ Number Number::operator/ (const Number &div)
                 a.push_back(1);
                 __add(ptr, *ptr, a);
             }
+            delete rm;
     }
     return Number(ptr, sign, true);
 }
 
 Number Number::operator% (const Number &div)
 {
-    std::vector<TWORD> *ptr;
+    std::vector<TWORD> *ptr, *tmp;
     switch(modcmp(*this, div))
     {
         case 0:
@@ -142,7 +143,8 @@ Number Number::operator% (const Number &div)
             }
             break;
         default:
-            __div(*_num, *div._num, &ptr);
+            tmp = __div(*_num, *div._num, &ptr);
+            delete tmp;
             if (_sign ^ div._sign && (ptr->size() > 1 || (*ptr)[0] != 0))
                 __sub(ptr, *div._num, *ptr);
     }
@@ -194,6 +196,7 @@ Number& Number::operator/= (const Number &div)
                 __add(ptr, *ptr, a);
             }
             delete _num;
+            delete rm;
             _num = ptr;
     }
 
@@ -202,7 +205,7 @@ Number& Number::operator/= (const Number &div)
 
 Number& Number::operator%= (const Number &div)
 {
-    std::vector<TWORD> *ptr;
+    std::vector<TWORD> *ptr, *tmp;
     _sign = true;
     switch(modcmp(*this, div))
     {
@@ -211,7 +214,8 @@ Number& Number::operator%= (const Number &div)
             _num->push_back(0);
             break;
         case 1:
-            __div(*_num, *div._num, &ptr);
+            tmp = __div(*_num, *div._num, &ptr);
+            delete tmp;
             if (_sign ^ div._sign && (ptr->size() > 1 || (*ptr)[0] != 0))
                 __sub(ptr, *div._num, *ptr);
             delete _num;
@@ -262,22 +266,18 @@ bool Number::operator!= (const Number &arg) const
 
 Number& Number::operator=(const Number &assign)
 {
-    // Free contents
-    if (this->_num)
-        delete _num;
-
     // Retrieving
     if (assign._tmp)
     {
+        if (this->_num)
+            delete _num;
         this->_num = assign._num;
         const_cast<Number&>(assign)._num = NULL;
     }
         // Copying
     else
-    {
-        this->_num = new std::vector<TWORD>;
         *_num = *assign._num;
-    }
+
     this->_sign = assign._sign;
 
     return *this;
@@ -329,7 +329,9 @@ inline std::vector<TWORD>* Number::__add_sign_op(std::vector<TWORD> *ptr, const 
         // Trivial result
         if (res == 0)
         {
-            ptr = new std::vector<TWORD>;
+            if (!ptr)
+                ptr = new std::vector<TWORD>;
+            ptr->clear();
             ptr->push_back(0);
             _sign = true;
         }
@@ -359,7 +361,9 @@ inline std::vector<TWORD>* Number::__sub_sign_op(std::vector<TWORD> *ptr, const 
         // Trivial result
         if (res == 0)
         {
-            ptr = new std::vector<TWORD>;
+            if (!ptr)
+                ptr = new std::vector<TWORD>;
+            ptr->clear();
             ptr->push_back(0);
         }
         else if (res == -1)
@@ -577,6 +581,8 @@ std::vector<TWORD>* Number::__div(std::vector<TWORD> &A, std::vector<TWORD> &B,
         long sz2 = (rm._num) ? rm._num->size() : 0;
         long sz1 = B.size() + s - 1 - sz2;
 
+        sz1 = (ptr < sz1) ? ptr : sz1;
+
         a._num->clear();
         for (long i = sz1; i >= 0 ; --i)
             a._num->push_back(A[ptr - i]);
@@ -618,7 +624,7 @@ std::vector<TWORD>* Number::__div(std::vector<TWORD> &A, std::vector<TWORD> &B,
 
     ptr = ret->size() - 1;
     long size = ret->size() / 2 - 1;
-    for (unsigned long i = 0; i <= size; ++i)
+    for (long i = 0; i <= size; ++i)
     {
         cmp = (*ret)[i];
         (*ret)[i] = (*ret)[ptr - i];
