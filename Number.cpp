@@ -109,7 +109,7 @@ Number Number::operator/ (const Number &div)
             ptr->push_back(0);
             break;
         default:
-            ptr = __div(*_num, *div._num, &rm);
+            ptr = __div(*_num, *div._num, &rm, true);
             if (!sign && (rm->size() > 1 || (*rm)[0] != 0))
             {
                 std::vector<TWORD> a;
@@ -143,8 +143,7 @@ Number Number::operator% (const Number &div)
             }
             break;
         default:
-            tmp = __div(*_num, *div._num, &ptr);
-            delete tmp;
+            __div(*_num, *div._num, &ptr, false);
             if (_sign ^ div._sign && (ptr->size() > 1 || (*ptr)[0] != 0))
                 __sub(ptr, *div._num, *ptr);
     }
@@ -188,7 +187,7 @@ Number& Number::operator/= (const Number &div)
             _num->push_back(0);
             break;
         default:
-            ptr = __div(*_num, *div._num, &rm);
+            ptr = __div(*_num, *div._num, &rm, true);
             if (!_sign && (rm->size() > 1 || (*rm)[0] != 0))
             {
                 std::vector<TWORD> a;
@@ -214,8 +213,7 @@ Number& Number::operator%= (const Number &div)
             _num->push_back(0);
             break;
         case 1:
-            tmp = __div(*_num, *div._num, &ptr);
-            delete tmp;
+            __div(*_num, *div._num, &ptr, false);
             if (_sign ^ div._sign && (ptr->size() > 1 || (*ptr)[0] != 0))
                 __sub(ptr, *div._num, *ptr);
             delete _num;
@@ -568,17 +566,18 @@ std::vector<TWORD>* Number::__mul(const std::vector<TWORD> &a, const TWORD b, st
 }
 
 std::vector<TWORD>* Number::__div(std::vector<TWORD> &A, std::vector<TWORD> &B,
-                                            std::vector<TWORD> **rem)
+                                            std::vector<TWORD> **rem, bool result)
 {
-    std::vector<TWORD> *ret = new std::vector<TWORD>;
+    std::vector<TWORD> *ret = result ? new std::vector<TWORD> : NULL;
     long ptr = A.size() - 1;
     Number a(new std::vector<TWORD>, true, false), b(&B,true, false), rm (NULL, true, false);
     TWORD cmpvar = A[A.size() - 1];
     TWORD cmp = B[B.size() - 1];
+    int bsize = b._num->size();
 
     auto construct = [&] (int s) -> void
     {
-        long sz2 = (rm._num) ? rm._num->size() : 0;
+        long sz2 = (rm._num && (rm._num->size() > 1 || (*rm._num)[0] != 0)) ? rm._num->size() : 0;
         long sz1 = B.size() + s - 1 - sz2;
 
         sz1 = (ptr < sz1) ? ptr : sz1;
@@ -593,25 +592,28 @@ std::vector<TWORD>* Number::__div(std::vector<TWORD> &A, std::vector<TWORD> &B,
 
     while (ptr >= 0)
     {
-        construct(cmpvar < cmp ? 1 : 0);
+        construct(cmpvar < cmp ? 1 : 0);	
+	TWORD x;	
 
-        TDWORD lo = 0, hi = ((TDWORD)1 << (sizeof(TWORD) * 8)) - 1;
-        TWORD x = 0;
-
-        while (lo <= hi)
-        {
-            TWORD tmp = (lo + hi) >> 1;
-            if (a >= b * tmp)
-            {
-                x = tmp;
-                lo = tmp + 1;
-            }
-            else
-                hi = tmp - 1;
-        }
-
-        rm = a - b * x;
-        ret->push_back(x);
+	if (a._num->size() == bsize)
+		x = a._num->back() / b._num->back();
+        else
+	{
+		int asize = a._num->size() - 1;
+		TDWORD tmp = ((TDWORD)(*a._num)[asize] << (8*sizeof(TWORD))) + (*a._num)[asize - 1];
+		x = tmp / (*b._num)[bsize - 1];	
+	}
+	
+	Number tmp;
+	tmp = b * x;
+	while (a < tmp)
+	{
+		x--;
+		tmp -= b;	
+	}	
+        rm = a - tmp;
+        if (ret)
+		ret->push_back(x);
         cmpvar = (*rm._num)[rm._num->size() - 1];
     }
 
@@ -622,13 +624,16 @@ std::vector<TWORD>* Number::__div(std::vector<TWORD> &A, std::vector<TWORD> &B,
     }
     b._num = NULL;
 
-    ptr = ret->size() - 1;
-    long size = ret->size() / 2 - 1;
-    for (long i = 0; i <= size; ++i)
+    if (ret)
     {
-        cmp = (*ret)[i];
-        (*ret)[i] = (*ret)[ptr - i];
-        (*ret)[ptr - i] = cmp;
+    	ptr = ret->size() - 1;
+    	long size = ret->size() / 2 - 1;
+    	for (long i = 0; i <= size; ++i)
+    	{
+        	cmp = (*ret)[i];
+        	(*ret)[i] = (*ret)[ptr - i];
+        	(*ret)[ptr - i] = cmp;
+    	}
     }
 
     return ret;
@@ -686,7 +691,7 @@ Number** Number::divide(Number &div)
 
             break;
         default:
-            ptr = __div(*_num, *div._num, &rm);
+            ptr = __div(*_num, *div._num, &rm, true);
             if (!sign && (rm->size() > 1 || (*rm)[0] != 0))
             {
                 std::vector<TWORD> a;
@@ -701,4 +706,37 @@ Number** Number::divide(Number &div)
     ret[1] = new Number(rm, true, false);
 
     return ret;
+}
+
+Number Number::operator()(Number &mul, Number &mod)
+{
+	return *this * mul % mod;
+}
+
+Number Number::operator()(Number *pow, Number &mod)
+{
+	std::vector<TWORD> *vect = new std::vector<TWORD>;
+	vect->push_back(1);
+	Number tmp(vect, true, true);
+	bool flag = false;
+
+	for (int i = pow->_num->size() - 1; i >= 0; --i)
+	{
+		TWORD tmpow = (*(pow->_num))[i];
+		TWORD pw = 0;
+		for (int j = 0; j < 8*sizeof(TWORD); ++j)
+		{
+			pw = tmpow & HIBITMASK;
+			tmpow <<= 1;
+			if (pw)
+			{
+				flag = true;
+				tmp = tmp((*this), mod); 
+			}
+			else if (flag)
+				tmp = tmp(tmp, mod);
+		}
+	}
+	
+	return tmp;
 }

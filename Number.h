@@ -16,6 +16,7 @@
 #define MIN(a,b) ((a>b)?b:a)
 #define LOWORD(a) ((TWORD)a)
 #define HIWORD(a) ((TWORD)(a>>(8*sizeof(TWORD))))
+#define HIBITMASK ((TWORD)1<<(8*sizeof(TWORD) - 1))
 
 namespace LongNumber
 {
@@ -104,6 +105,10 @@ namespace LongNumber
          */
         Number** divide(Number &div);
 
+	Number operator()(Number* pow, Number &mod);
+
+	Number operator()(Number& mul, Number &mod);
+
         bool operator == (const Number &arg) const;
         bool operator != (const Number &arg) const;
         bool operator > (const Number &arg) const;
@@ -174,7 +179,7 @@ namespace LongNumber
          * @return result vector of TWORD without leading zeros
          */
         static std::vector<TWORD>* __div(std::vector<TWORD> &a, std::vector<TWORD> &b,
-                                            std::vector<TWORD> **rem);
+                                            std::vector<TWORD> **rem, bool result);
     };
 
     /** Hexadecimal output to standard streams (cout, string)
