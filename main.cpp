@@ -13,15 +13,15 @@ int main()
     srand(time(0));
 
     test(true);
-/*
-    for (unsigned i = 0; i < 1000000; i++)
+
+    for (unsigned i = 0; i < 1000; i++)
     {
-        if (!(i % 100000))
+        if (!(i % 100))
             cout << "\r" << i << flush;
 
         test(false);
     }
-*/    cout << endl;
+    cout << endl;
     return 0;
 }
 
@@ -90,14 +90,26 @@ void mul_mod(Number &A, Number &B, Number &mod, bool out)
 
 void pow_mod(Number &A, Number &pow, Number &pow2, Number &mod, bool out)
 {
-	Number D;
-	cout << A << endl;
-	D = A(&pow, mod);
-	cout << D << endl;
-	D = D(&pow2, mod);
-	if (A != D)
-		cout << "A = " << A << endl
-			<< "D = " << D << endl;
+    if (out)
+    {
+        Number D;
+        cout << "A = " << A << endl;
+        D = A(&pow, mod);
+        cout << "A^e = " << D << endl;
+        D = D(&pow2, mod);
+        cout << "A^(e*d) = " << D << endl;
+        cout << "A^(e*d) == A: " << (bool)(D == A) << endl;
+    }
+    else
+    {
+        Number D;
+        D = A(&pow, mod);
+        D = D(&pow2, mod);
+        //	D = D(&pow2, mod);
+        if (A != D)
+            cout << "A = " << A << endl
+                 << "D = " << D << endl;
+    }
 }
 
 void test(bool out)
@@ -109,9 +121,9 @@ void test(bool out)
     
     for (int i = 0; i < SIZE; ++i)
     {
-        a->push_back((rand() << 1) % (TWORD)(1 << 8*sizeof(TWORD)));
-//        b->push_back((rand() << 1) % (TWORDq)i(1 << 8*sizeof(TWORD)));
-//	m->push_back((rand() << 1) % (TWORD)(1 << 8*sizeof(TWORD)));
+        a->push_back((rand()) % ((TWORD)1 << 8*sizeof(TWORD)));
+//      b->push_back((rand() << 1) % (TWORD)(1 << 8*sizeof(TWORD)));
+//	    m->push_back((rand() << 1) % (TWORD)(1 << 8*sizeof(TWORD)));
     }
 
 //    m->pop_back();
@@ -142,11 +154,15 @@ void test(bool out)
 	m2->push_back(0x2d38abbc);
 	m2->push_back(0x0cd0456c);
 	m2->push_back(0x8add50d7);
-
-
     
 	Number A(a), e(m1), d(m2), mod(m);
 
     pow_mod(A, e, d, mod, out);
+
+//    Number A(a), B(b);
+//    t_mul_div(A,B,out);
+
+//    Number A(a), B(m1), mod(m);
+//    mul_mod(A,B,mod, out);
 }
 

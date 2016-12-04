@@ -568,7 +568,7 @@ std::vector<TWORD>* Number::__mul(const std::vector<TWORD> &a, const TWORD b, st
 std::vector<TWORD>* Number::__div(std::vector<TWORD> &A, std::vector<TWORD> &B,
                                             std::vector<TWORD> **rem, bool result)
 {
-    std::vector<TWORD> *ret = result ? new std::vector<TWORD> : NULL;
+    std::vector<TWORD> *ret = result ? (new std::vector<TWORD>) : NULL;
     long ptr = A.size() - 1;
     Number a(new std::vector<TWORD>, true, false), b(&B,true, false), rm (NULL, true, false);
     TWORD cmpvar = A[A.size() - 1];
@@ -728,15 +728,14 @@ Number Number::operator()(Number *pow, Number &mod)
 		{
 			pw = tmpow & HIBITMASK;
 			tmpow <<= 1;
+            if (flag)
+                tmp = tmp (tmp, mod);
 			if (pw)
 			{
 				flag = true;
-				tmp = tmp((*this), mod); 
+				tmp = tmp((*this), mod);
 			}
-			else if (flag)
-				tmp = tmp(tmp, mod);
 		}
 	}
-	
 	return tmp;
 }
