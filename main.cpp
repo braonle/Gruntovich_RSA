@@ -1,3 +1,4 @@
+#include <fstream>
 #include "Number.h"
 
 #define LENGTH 256
@@ -6,6 +7,106 @@
 using namespace std;
 using namespace LongNumber;
 
+
+int main(int argc, char* argv[])
+{
+    if (argc == 3 || argc == 4)
+    {
+        fstream in, out;
+        vector<TWORD> *m = new vector<TWORD>;
+        vector<TWORD> *m1 = new vector<TWORD>;
+        vector<TWORD> *m2 = new vector<TWORD>;
+
+        m->push_back(0xffcb6d13);
+        m->push_back(0xba83d640);
+        m->push_back(0x9c721158);
+        m->push_back(0x1b7bdae5);
+        m->push_back(0x3d6d4387);
+        m->push_back(0x678f8a17);
+        m->push_back(0x74cd0aa3);
+        m->push_back(0xd9ae128b);
+
+        m1->push_back(0x609155f3);
+        m1->push_back(0x0f69b60e);
+        m1->push_back(0x8ff074fc);
+        m1->push_back(0x8abe1307);
+        m1->push_back(0x76f66893);
+        m1->push_back(0x8f676cd2);
+        m1->push_back(0x5ea0ff91);
+        m1->push_back(0xd2078c90);
+
+        m2->push_back(0xb511080b);
+        m2->push_back(0xe1c6d27c);
+        m2->push_back(0x3ba72076);
+        m2->push_back(0x9a538711);
+        m2->push_back(0x286be430);
+        m2->push_back(0x2d38abbc);
+        m2->push_back(0x0cd0456c);
+        m2->push_back(0x8add50d7);
+
+        Number e(m1), d(m2), mod(m);
+        Number *op;
+        unsigned long wend = 0, rend = 0;
+        switch (argc)
+        {
+            case 3:
+                op = &e;
+                rend = SIZE - 1;
+                wend = SIZE;
+                break;
+            case 4:
+                op = &d;
+                rend = SIZE;
+                wend = SIZE - 1;
+                break;
+            default: op = NULL;
+        }
+
+        in.open(argv[1], ios_base::binary | ios_base::in);
+        out.open(argv[2], ios_base::binary | ios_base::out);
+        while (!in.eof())
+        {
+            unsigned long i;
+            TWORD buf;
+            vector<TWORD> *v = new vector<TWORD>(rend);
+            for (i = 0; i < rend && !in.eof(); ++i)
+            {
+                buf = 0;
+                in.read((char *) &buf, sizeof(TWORD));
+                v->at(i) = buf;
+            }
+            //remove trailing zeroes
+            if (in.eof())
+            {
+                bool flag = true;
+                for (i = 0; i < v->size(); ++i)
+                    if (v->at(i) != 0)
+                        flag = false;
+                if (flag)
+                    return 0;
+            }
+            Number num(v);
+            num = num(op, mod);
+
+            v = num.getContent();
+
+            while(v->size() < wend && wend == SIZE)
+                v->push_back(0);
+
+            for (i = 0; i < v->size(); ++i)
+            {
+                buf = v->at(i);
+                out.write((char *) &buf, sizeof(TWORD));
+            }
+        }
+        in.close();
+        out.close();
+    }
+    return 0;
+}
+
+
+/*
 void test(bool);
 
 int main()
@@ -103,8 +204,7 @@ void pow_mod(Number &A, Number &pow, Number &pow2, Number &mod, bool out)
     else
     {
         Number D;
-        D = A(&pow, mod);
-        D = D(&pow2, mod);
+        D = A(&pow, mod)(&pow2, mod);
         //	D = D(&pow2, mod);
         if (A != D)
             cout << "A = " << A << endl
@@ -165,4 +265,4 @@ void test(bool out)
 //    Number A(a), B(m1), mod(m);
 //    mul_mod(A,B,mod, out);
 }
-
+*/

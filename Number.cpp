@@ -739,3 +739,8 @@ Number Number::operator()(Number *pow, Number &mod)
 	}
 	return tmp;
 }
+
+std::vector<TWORD>* Number::getContent()
+{
+    return _num;
+}

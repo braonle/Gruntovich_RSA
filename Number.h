@@ -116,6 +116,8 @@ namespace LongNumber
         bool operator >= (const Number &arg) const;
         bool operator <= (const Number &arg) const;
 
+        std::vector<TWORD>* getContent();
+
         /// Reverses the sign
         void negate(void);
         unsigned long getSize(void) const;
